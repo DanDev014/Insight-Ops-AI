@@ -54,7 +54,8 @@
     <UPageSection>
       <UPageCTA
         title="Insight-Ops-AI"
-        description="Insight-Ops-AI is an AI Chief Operating Officer for creative agencies. It analyzes client payments, workforce utilization, project perfomance"
+        description="Insight-Ops-AI is an AI Chief Operating Officer for creative agencies.
+         It analyzes client payments, workforce utilization, project perfomance and business operations"
         variant="subtle"
         :links="[{
           label: 'Start building',
