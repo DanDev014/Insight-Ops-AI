@@ -1,3 +1,6 @@
 <template>
-    <div>Projects</div>
+  <PageHeader
+    title="Projects"
+    description="Track project perfomance and profitability"
+  />
 </template>
