@@ -113,10 +113,16 @@ def _rule_based_brief(candidates: list[dict], collected: dict) -> dict:
     ranked = sorted(candidates, key=_threat_score, reverse=True)
     top = _pick_with_variety(ranked, TOP_N_ACTIONS)
 
-    # A simple, transparent agency-health score: start at 100, subtract for risk.
-    total_at_risk = sum(c["financial_impact"] for c in candidates)
+    # Agency health: start at 100 and subtract two BOUNDED penalties so the
+    # score spreads across a believable range instead of flooring at 0 on any
+    # realistic dataset. Urgency penalty scales with the *share* of high-urgency
+    # findings (not the raw count); risk penalty has diminishing returns and a cap.
+    total = len(candidates)
     high_urgency = sum(1 for c in candidates if c["urgency"] == "High")
-    score = max(0, 100 - high_urgency * 4 - int(total_at_risk / 20000))
+    total_at_risk = sum(c["financial_impact"] for c in candidates)
+    urgency_penalty = (high_urgency / total) * 35 if total else 0   # up to 35 pts
+    risk_penalty = min(35, total_at_risk / 50000)                   # up to 35 pts
+    score = round(max(0, 100 - urgency_penalty - risk_penalty))
 
     actions = []
     for i, c in enumerate(top, 1):
