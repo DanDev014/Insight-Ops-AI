@@ -14,10 +14,12 @@ export async function request<T>(
   } catch (error: any) {
     console.error(`[BFF] ${endpoint}`, error)
 
+    const flaskMessage = error?.data?.error
+
     throw createError({
-      statusCode: error?.statusCode || 500,
-      statusMessage:
-        error?.statusMessage || 'An unexpected error occurred.',
+      statusCode: error?.statusCode || error?.status || 500,
+      statusMessage: flaskMessage || 'An unexpected error occurred.',
+      data: error?.data,
     })
   }
 }

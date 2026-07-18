@@ -7,6 +7,7 @@ definePageMeta({
   title: "Login",
 });
 
+// --- Validation schema ---
 const schema = v.object({
   email: v.pipe(
     v.string("Email is required"),
@@ -27,30 +28,52 @@ const state = reactive<Partial<Schema>>({
 });
 
 const loading = ref(false);
+const authStore = useAuthStore();
+const toast = useToast();
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   loading.value = true;
   try {
-    console.log("Validated login payload, ready for BFF:", event.data);
+    await authStore.login(event.data.email, event.data.password);
+    await navigateTo("/dashboard");
+    toast.add({
+      title: "Welcome back",
+      description: "Login Successful",
+      color: "success",
+    });
+  } catch (error: any) {
+    toast.add({
+      title: "Login failed",
+      description:
+        error?.data?.statusMessage ||
+        error?.data?.message ||
+        "Invalid email or password",
+      color: "error",
+    });
   } finally {
     loading.value = false;
   }
 }
 
-const inputUi = { base: "bg-white  text-black" };
+const inputUi = { base: "bg-white border-2 border-violet-500 text-black" };
+const showPassword = ref(false);
+
+const passwordFieldType = computed(() =>
+  showPassword.value ? "text" : "password",
+);
 </script>
 
 <template>
   <UCard :ui="{ root: 'shadow-lg ring-0 max-w-sm w-full' }">
     <template #header>
-      <div class="text-center">
+      <div>
         <h2 class="text-lg font-semibold text-white">Sign in</h2>
         <p class="text-sm text-muted">Enter your credentials to continue.</p>
       </div>
     </template>
 
     <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-      <UFormField class="text-black" label="Email" name="email" required>
+      <UFormField label="Email" name="email" required>
         <UInput
           v-model="state.email"
           type="email"
@@ -63,11 +86,22 @@ const inputUi = { base: "bg-white  text-black" };
       <UFormField label="Password" name="password" required>
         <UInput
           v-model="state.password"
-          type="password"
+          :type="passwordFieldType"
           placeholder="Enter your password"
           class="w-full"
           :ui="inputUi"
-        />
+        >
+          <template #trailing>
+            <UButton
+              :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              color="neutral"
+              variant="link"
+              :padded="false"
+              :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              @click="showPassword = !showPassword"
+            />
+          </template>
+        </UInput>
       </UFormField>
 
       <UButton
