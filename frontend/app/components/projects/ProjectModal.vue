@@ -122,6 +122,8 @@ function submitForm() {
     v-model:open="open"
     title="New Project"
     description="Add a new project to track budget, hours, and progress."
+    :modal="true"
+    :dismissible="false"
   >
     <UButton
       label="New Project"
@@ -210,12 +212,12 @@ function submitForm() {
 
     <template #footer>
       <div class="flex justify-end gap-3 w-full">
-        <UButton
+        <!-- <UButton
           label="Cancel"
           color="neutral"
           variant="ghost"
           @click="open = false"
-        />
+        /> -->
         <UButton
           label="Create project"
           color="primary"
