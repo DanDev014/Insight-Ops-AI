@@ -6,36 +6,36 @@ invoices (paid_date is null) — the ones the agent can still act on. For each i
 produces: probability of being >15 days late, expected days late, the dollar
 amount at risk, and whether a reminder is due (invoice within the lead window
 AND high-risk).
-
+ 
 This is what makes DS 1 actionable rather than descriptive: the output directly
 supports "send a polite reminder 5 days before the due date."
 """
-
+ 
 from __future__ import annotations
-
+ 
 from datetime import datetime
-
+ 
 import joblib
 import pandas as pd
-
+ 
 from config import ARTIFACT_PATH, REMINDER_LEAD_DAYS
 from features import build_scoring_frame
-
-
+ 
+ 
 def load_artifacts(path: str = ARTIFACT_PATH) -> dict:
     return joblib.load(path)
-
-
+ 
+ 
 def _money(x: float) -> str:
     return f"${x:,.0f}"
-
-
+ 
+ 
 def score_outstanding(tables: dict, artifacts: dict, today: datetime | None = None) -> pd.DataFrame:
     today = pd.Timestamp(today or datetime.now()).normalize()
     frame = build_scoring_frame(tables, artifacts["industry_cols"])
     if frame.empty:
         return frame
-
+ 
     X = frame[artifacts["feature_cols"]]
     frame = frame.copy()
     frame["prob_late"] = artifacts["clf"].predict_proba(X)[:, 1]
@@ -47,12 +47,19 @@ def score_outstanding(tables: dict, artifacts: dict, today: datetime | None = No
         & (frame["days_until_due"] >= 0)
         & (frame["days_until_due"] <= REMINDER_LEAD_DAYS)
     )
+    # High-risk invoices already past their due date need a different action
+    # than upcoming ones -- a "reminder before it's late" doesn't apply once
+    # it's already late; this is a collections/escalation nudge instead.
+    frame["needs_escalation"] = (
+        (frame["is_high_risk"] == 1)
+        & (frame["days_until_due"] < 0)
+    )
     return frame
-
-
+ 
+ 
 def build_intelligence(tables: dict, artifacts: dict, today: datetime | None = None) -> dict:
     scored = score_outstanding(tables, artifacts, today=today)
-
+ 
     if scored.empty:
         return {
             "generated_at": pd.Timestamp(today or datetime.now()).date().isoformat(),
@@ -60,11 +67,11 @@ def build_intelligence(tables: dict, artifacts: dict, today: datetime | None = N
             "summary": {"total_clients": 0, "outstanding_invoices": 0,
                         "revenue_at_risk": 0.0, "high_risk_clients": 0,
                         "high_risk_invoices": 0, "avg_days_late_predicted": 0.0},
-            "invoices": [], "reminders": [], "recommendations": [],
+            "invoices": [], "reminders": [], "escalations": [], "recommendations": [],
         }
-
+ 
     high = scored[scored["is_high_risk"] == 1]
-
+ 
     summary = {
         "total_clients": int(scored["client_id"].nunique()),
         "outstanding_invoices": int(len(scored)),
@@ -74,7 +81,7 @@ def build_intelligence(tables: dict, artifacts: dict, today: datetime | None = N
         "avg_days_late_predicted": round(
             float(high["predicted_days_late"].mean()) if len(high) else 0.0, 1),
     }
-
+ 
     def invoice_row(r):
         return {
             "invoice_id": int(r["id"]),
@@ -87,11 +94,12 @@ def build_intelligence(tables: dict, artifacts: dict, today: datetime | None = N
             "predicted_days_late": int(r["predicted_days_late"]),
             "risk_status": "HIGH RISK" if r["is_high_risk"] else "LOW RISK",
             "needs_reminder": bool(r["needs_reminder"]),
+            "needs_escalation": bool(r["needs_escalation"]),
         }
-
+ 
     invoices = [invoice_row(r) for _, r in
                 scored.sort_values("prob_late", ascending=False).iterrows()]
-
+ 
     # Recommendations: one COO-style action per high-risk invoice, phrased like
     # the spec's "Client X has an 85% probability of delaying their $10,000
     # payment by 18 days."
@@ -105,6 +113,8 @@ def build_intelligence(tables: dict, artifacts: dict, today: datetime | None = N
         )
         if r["needs_reminder"]:
             alert += " Due within the reminder window — send a polite payment reminder now."
+        elif r["needs_escalation"]:
+            alert += " Already past due — escalate to a firmer collections follow-up."
         recs.append({
             "client_name": r.get("client_name"),
             "invoice_id": int(r["id"]),
@@ -113,16 +123,19 @@ def build_intelligence(tables: dict, artifacts: dict, today: datetime | None = N
             "predicted_days_late": int(r["predicted_days_late"]),
             "due_date": r["due_date"].date().isoformat(),
             "needs_reminder": bool(r["needs_reminder"]),
+            "needs_escalation": bool(r["needs_escalation"]),
             "alert_text": alert,
         })
-
+ 
     reminders = [x for x in recs if x["needs_reminder"]]
-
+    escalations = [x for x in recs if x["needs_escalation"]]
+ 
     return {
         "generated_at": pd.Timestamp(today or datetime.now()).date().isoformat(),
         "model": artifacts.get("metrics", {}),
         "summary": summary,
         "invoices": invoices,
         "reminders": reminders,
+        "escalations": escalations,
         "recommendations": recs,
     }

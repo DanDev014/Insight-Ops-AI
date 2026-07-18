@@ -88,6 +88,11 @@ def reminders():
     return get_intelligence()["reminders"]
 
 
+@app.get("/cashflow/escalations", response_model=list[Recommendation])
+def escalations():
+    return get_intelligence()["escalations"]
+
+
 @app.get("/cashflow/intelligence", response_model=Intelligence)
 def intelligence():
     return get_intelligence()
