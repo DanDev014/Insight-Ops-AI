@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ProjectModal from "./ProjectModal.vue";
+
 interface Project {
   id: number;
   name: string;
@@ -14,6 +16,8 @@ const props = defineProps<{
   projects: Project[];
   loading?: boolean;
 }>();
+
+const showModal = ref(false);
 
 const search = ref("");
 const status = ref("all");
@@ -143,9 +147,11 @@ const badgeColor = (status: string) => {
             icon="i-lucide-plus"
             label="New Project"
             class="text-white"
+            @click="showModal = true"
           />
         </div>
       </div>
+      <ProjectModal v-model:open="showModal" />
     </template>
 
     <UTable
