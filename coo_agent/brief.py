@@ -88,9 +88,30 @@ def _threat_score(c: dict) -> float:
 # --------------------------------------------------------------------------
 # 3a. Rule-based synthesis (mock — no LLM key needed)
 # --------------------------------------------------------------------------
+def _pick_with_variety(ranked: list[dict], n: int) -> list[dict]:
+    """Surface the top item from each engine first (so every available engine is
+    represented in the brief), then fill any remaining slots by threat score.
+    Keeps the demo showing all three engines instead of an all-cashflow list."""
+    picked, seen_sources = [], set()
+    # Pass 1: highest-scoring item per source (ranked is already score-sorted)
+    for c in ranked:
+        if c["source"] not in seen_sources:
+            picked.append(c)
+            seen_sources.add(c["source"])
+        if len(picked) >= n:
+            return picked
+    # Pass 2: fill remaining slots with the next-highest, regardless of source
+    for c in ranked:
+        if c not in picked:
+            picked.append(c)
+        if len(picked) >= n:
+            break
+    return picked
+
+
 def _rule_based_brief(candidates: list[dict], collected: dict) -> dict:
     ranked = sorted(candidates, key=_threat_score, reverse=True)
-    top = ranked[:TOP_N_ACTIONS]
+    top = _pick_with_variety(ranked, TOP_N_ACTIONS)
 
     # A simple, transparent agency-health score: start at 100, subtract for risk.
     total_at_risk = sum(c["financial_impact"] for c in candidates)
