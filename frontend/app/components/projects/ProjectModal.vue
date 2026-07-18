@@ -125,13 +125,6 @@ function submitForm() {
     :modal="true"
     :dismissible="false"
   >
-    <UButton
-      label="New Project"
-      icon="i-lucide-plus"
-      color="primary"
-      @click="open = true"
-    />
-
     <template #body>
       <UForm
         ref="formRef"
