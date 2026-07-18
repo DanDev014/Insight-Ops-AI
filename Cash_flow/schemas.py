@@ -31,6 +31,7 @@ class Invoice(BaseModel):
     predicted_days_late: int
     risk_status: str = Field(..., description="HIGH RISK | LOW RISK")
     needs_reminder: bool
+    needs_escalation: bool
 
 
 class Recommendation(BaseModel):
@@ -41,6 +42,7 @@ class Recommendation(BaseModel):
     predicted_days_late: int
     due_date: str
     needs_reminder: bool
+    needs_escalation: bool
     alert_text: str
 
 
@@ -50,4 +52,5 @@ class Intelligence(BaseModel):
     summary: Summary
     invoices: list[Invoice]
     reminders: list[Recommendation]
+    escalations: list[Recommendation]
     recommendations: list[Recommendation]
