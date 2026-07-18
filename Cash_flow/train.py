@@ -18,6 +18,7 @@ Run:
 
 from __future__ import annotations
 
+import os
 import joblib
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
@@ -101,6 +102,7 @@ def main():
             "reg_mae": float(mean_absolute_error(yrg_te, reg_pred)),
         },
     }
+    os.makedirs(os.path.dirname(ARTIFACT_PATH), exist_ok=True)
     joblib.dump(artifacts, ARTIFACT_PATH)
     print(f"\nSaved model bundle -> {ARTIFACT_PATH}")
 
