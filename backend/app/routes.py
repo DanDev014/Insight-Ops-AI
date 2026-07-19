@@ -212,11 +212,7 @@ def login():
         return jsonify({"error": "Email and password are required"}), 400
 
     user = User.query.filter_by(email=email).first()
-    if not user or not check_password_hash(user.password_hash, password):
-        return jsonify({"error": "Invalid email or password"}), 401
 
-feat/ui
-    # Validate credentials
     # Validate credentials
     if not user or not check_password_hash(
         user.password_hash,
