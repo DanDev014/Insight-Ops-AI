@@ -124,7 +124,9 @@ def projects_intelligence():
 
 # ---------------------------------------------------------------------------
 # Auth + CRUD endpoints (from develop)
-# ---------------------------------------------------------------------------
+# -------------------------------------
+
+#PROJECT ENDPOINTS
 @api.get("/projects/<int:user_id>")
 def get_projects(user_id):
     page = request.args.get("page", default=1, type=int)
@@ -202,6 +204,7 @@ def create_project():
         return jsonify({"error": "Failed to create project"}), 500
 
 
+#AUTH ENDPOINTS
 @api.post("/login")
 def login():
     data = request.get_json(silent=True) or {}
@@ -225,3 +228,83 @@ def login():
         "message": "Login successful",
         "user": user.to_dict()
     }), 200
+
+#CLIENT ENDPOINTS
+@api.get("/clients/<int:user_id>")
+def get_clients(user_id):
+    page = request.args.get("page", default=1, type=int)
+    per_page = request.args.get("per_page", default=20, type=int)
+    search = request.args.get("search", default="", type=str).strip()
+
+    # Prevent excessively large page sizes
+    per_page = min(max(per_page, 1), 100)
+
+    # Ensure user exists
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    query = Client.query.filter_by(user_id=user_id)
+
+    # Search by client name (case-insensitive)
+    if search:
+        query = query.filter(Client.name.ilike(f"%{search}%"))
+
+    pagination = query.order_by(Client.id.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    return jsonify({
+        "clients": [client.to_dict() for client in pagination.items],
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+        "total": pagination.total,
+        "total_pages": pagination.pages,
+    }), 200
+
+
+@api.post("/clients")
+def create_client():
+    data = request.get_json(silent=True) or {}
+
+    required_fields = ["user_id", "name"]
+
+    for field in required_fields:
+        if not data.get(field):
+            return jsonify({
+                "error": f"Missing required field: {field}"
+            }), 400
+
+    # Validate user
+    user = User.query.get(data["user_id"])
+    if not user:
+        return jsonify({
+            "error": "User not found"
+        }), 404
+
+    try:
+        client = Client(
+            user_id=data["user_id"],
+            name=data["name"],
+            industry=data.get("industry"),
+            contract_value=data.get("contract_value"),
+            payment_terms=data.get("payment_terms"),
+            historical_payment_delay=data.get("historical_payment_delay"),
+            engagement_score=data.get("engagement_score"),
+        )
+
+        db.session.add(client)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Client created",
+            "client": client.to_dict()
+        }), 201
+
+    except Exception:
+        db.session.rollback()
+        return jsonify({
+            "error": "Failed to create client"
+        }), 500

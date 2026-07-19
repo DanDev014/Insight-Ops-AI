@@ -52,6 +52,9 @@ const items: NavigationMenuItem[][] = [
     },
   ],
 ];
+
+const authStore = useAuthStore();
+const user = authStore.user;
 </script>
 
 <template>
@@ -141,12 +144,10 @@ const items: NavigationMenuItem[][] = [
 
         <div v-if="!collapsed" class="flex flex-1 items-center justify-between">
           <div class="text-left">
-            <p class="text-sm font-medium text-white">Daniel Johnson</p>
+            <p class="text-sm font-medium text-white">{{ user.email }}</p>
 
             <p class="text-xs text-gray-400">Agency Owner</p>
           </div>
-
-          <UIcon name="i-lucide-chevrons-up-down" class="text-gray-500" />
         </div>
       </button>
     </template>
