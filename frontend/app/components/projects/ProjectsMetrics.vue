@@ -12,12 +12,16 @@ interface Project {
 
 const props = defineProps<{
   projects: Project[];
+  total?: number;
 }>();
 
 const metrics = computed(() => {
   const projects = props.projects;
 
-  const totalProjects = projects.length;
+  // Real total count across all pages, from the API's pagination metadata.
+  // Everything else below is computed only from the currently loaded page,
+  // until the dedicated summary endpoint is integrated.
+  const totalProjects = props.total ?? projects.length;
 
   const activeProjects = projects.filter(
     (project) => project.status === "active",
@@ -87,7 +91,7 @@ const cards = computed(() => [
     <UCard
       v-for="card in cards"
       :key="card.title"
-  :ui="{ root: 'bg-white shadow-lg ring-0' }"
+      :ui="{ root: 'bg-white shadow-lg ring-0' }"
     >
       <div class="flex items-start justify-between">
         <div>

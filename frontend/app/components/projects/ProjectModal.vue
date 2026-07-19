@@ -2,22 +2,38 @@
 import * as v from "valibot";
 import type { FormSubmitEvent } from "@nuxt/ui";
 
-// --- Hardcoded options (backend routes for clients not implemented yet) ---
-const clientOptions = [
-  { label: "Acme Corp", value: 1 },
-  { label: "Northwind Traders", value: 2 },
-  { label: "Globex Inc", value: 3 },
-  { label: "Initech", value: 4 },
-];
+interface Client {
+  id: number;
+  name: string;
+}
+
+interface ClientsResponse {
+  clients: Client[];
+  page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+}
+
+
+const { data: clientsData } = await useFetch<ClientsResponse>("/api/clients", {
+  query: { per_page: 100 },
+});
+
+const clientOptions = computed(() =>
+  (clientsData.value?.clients ?? []).map((client) => ({
+    label: client.name,
+    value: client.id,
+  })),
+);
 
 const statusOptions = [
   { label: "Active", value: "active" },
   { label: "On Hold", value: "on_hold" },
-  { label: "Completed", value: "completed" },
-  { label: "Cancelled", value: "cancelled" },
+  // { label: "Completed", value: "completed" },
+  // { label: "Cancelled", value: "cancelled" },
 ];
 
-// --- Validation schema ---
 const schema = v.object({
   name: v.pipe(
     v.string("Project name is required"),
@@ -48,7 +64,7 @@ const schema = v.object({
 
 type Schema = v.InferOutput<typeof schema>;
 
-const open = ref(false);
+const open = defineModel<boolean>("open", { default: false });
 const loading = ref(false);
 
 const state = reactive<Partial<Schema>>({
@@ -122,8 +138,6 @@ function submitForm() {
     v-model:open="open"
     title="New Project"
     description="Add a new project to track budget, hours, and progress."
-    :modal="true"
-    :dismissible="false"
   >
     <template #body>
       <UForm
@@ -152,6 +166,9 @@ function submitForm() {
             class="w-full"
             :ui="selectUi"
           />
+          <p v-if="clientOptions.length === 0" class="text-xs text-muted mt-1">
+            No clients yet — add one before creating a project.
+          </p>
         </UFormField>
 
         <div class="grid grid-cols-2 gap-4">
@@ -205,12 +222,12 @@ function submitForm() {
 
     <template #footer>
       <div class="flex justify-end gap-3 w-full">
-        <!-- <UButton
+        <UButton
           label="Cancel"
           color="neutral"
           variant="ghost"
           @click="open = false"
-        /> -->
+        />
         <UButton
           label="Create project"
           color="primary"

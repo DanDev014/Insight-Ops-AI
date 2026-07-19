@@ -12,15 +12,22 @@ interface Project {
   hours_logged: number;
 }
 
-const props = defineProps<{
+defineProps<{
   projects: Project[];
   loading?: boolean;
+  total?: number;
+  perPage?: number;
 }>();
 
-const showModal = ref(false);
+const emit = defineEmits<{
+  created: [project: Record<string, any>];
+}>();
 
-const search = ref("");
-const status = ref("all");
+const search = defineModel<string>("search", { default: "" });
+const status = defineModel<string>("status", { default: "all" });
+const page = defineModel<number>("page", { default: 1 });
+
+const showModal = ref(false);
 
 const statusOptions = [
   { label: "All", value: "all" },
@@ -29,18 +36,9 @@ const statusOptions = [
   { label: "Completed", value: "completed" },
 ];
 
-const filteredProjects = computed(() => {
-  return props.projects.filter((project) => {
-    const matchesSearch = project.name
-      .toLowerCase()
-      .includes(search.value.toLowerCase());
-
-    const matchesStatus =
-      status.value === "all" || project.status === status.value;
-
-    return matchesSearch && matchesStatus;
-  });
-});
+function onProjectCreated(project: Record<string, any>) {
+  emit("created", project);
+}
 
 const columns = [
   {
@@ -151,12 +149,12 @@ const badgeColor = (status: string) => {
           />
         </div>
       </div>
-      <ProjectModal v-model:open="showModal" />
+      <ProjectModal v-model:open="showModal" @created="onProjectCreated" />
     </template>
 
     <UTable
       :loading="loading"
-      :data="filteredProjects"
+      :data="projects"
       :columns="columns"
       :ui="{ th: 'text-black' }"
     >
@@ -203,5 +201,15 @@ const badgeColor = (status: string) => {
         </UBadge>
       </template>
     </UTable>
+
+    <template #footer>
+      <div class="flex justify-center items-center">
+        <UPagination
+          v-model:page="page"
+          :total="total ?? 0"
+          :items-per-page="perPage ?? 20"
+        />
+      </div>
+    </template>
   </UCard>
 </template>
