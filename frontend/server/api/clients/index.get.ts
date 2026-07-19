@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event);
 
   return await authRequest(event, (user) => ({
-    endpoint: `/projects/${user.id}`,
+    endpoint: `/clients/${user.id}`,
     options: { method: "GET", query },
   }));
 });
