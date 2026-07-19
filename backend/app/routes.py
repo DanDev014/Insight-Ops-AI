@@ -203,42 +203,6 @@ def create_project():
         db.session.rollback()
         return jsonify({"error": "Failed to create project"}), 500
 
-
-@api.get("/teams")
-def get_teams():
-    page = request.args.get("page", default=1, type=int)
-    per_page = request.args.get("per_page", default=20, type=int)
-    search = request.args.get("search", default="", type=str).strip()
-    role = request.args.get("role", default="", type=str).strip()
-
-    # Prevent excessively large page sizes
-    per_page = min(max(per_page, 1), 100)
-
-    query = Team.query
-
-    # Case-insensitive search by name
-    if search:
-        query = query.filter(Team.name.ilike(f"%{search}%"))
-
-    # Exact match filter by role
-    if role:
-        query = query.filter(Team.role == role)
-
-    pagination = query.order_by(Team.id.desc()).paginate(
-        page=page,
-        per_page=per_page,
-        error_out=False
-    )
-
-    return jsonify({
-        "team": [member.to_dict() for member in pagination.items],
-        "page": pagination.page,
-        "per_page": pagination.per_page,
-        "total": pagination.total,
-        "total_pages": pagination.pages,
-    }), 200
-
-
 @api.get("/teams")
 def get_teams():
     page = request.args.get("page", default=1, type=int)
@@ -287,12 +251,8 @@ def login():
 
     user = User.query.filter_by(email=email).first()
 
-
     # Validate credentials
-    if not user or not check_password_hash(
-        user.password_hash,
-        password
-    ):
+    if not user or not check_password_hash(user.password_hash, password):
         return jsonify({
             "error": "Invalid email or password"
         }), 401
