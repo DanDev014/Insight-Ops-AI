@@ -3,7 +3,7 @@ from datetime import date, datetime
 from flask import Blueprint, jsonify, request
 from werkzeug.security import check_password_hash
 
-from .models import Client, Project, User, db
+from .models import Client, Project, Team, User, db
 
 api = Blueprint("api", __name__)
 
@@ -173,9 +173,9 @@ def create_project():
     if not user:
         return jsonify({"error": "Client or user not found"}), 404
 
-    client = Client.query.filter_by(id=data["client_id"], user_id=data["user_id"]).first()
+    client = Client.query.get(data["client_id"])
     if not client:
-        return jsonify({"error": "Client or user not found"}), 404
+        return jsonify({"error": "Client not found"}), 404
 
     deadline = None
     if data.get("deadline"):
@@ -203,11 +203,46 @@ def create_project():
         db.session.rollback()
         return jsonify({"error": "Failed to create project"}), 500
 
+@api.get("/teams")
+def get_teams():
+    page = request.args.get("page", default=1, type=int)
+    per_page = request.args.get("per_page", default=20, type=int)
+    search = request.args.get("search", default="", type=str).strip()
+    role = request.args.get("role", default="", type=str).strip()
+
+    # Prevent excessively large page sizes
+    per_page = min(max(per_page, 1), 100)
+
+    query = Team.query
+
+    # Case-insensitive search by name
+    if search:
+        query = query.filter(Team.name.ilike(f"%{search}%"))
+
+    # Exact match filter by role
+    if role:
+        query = query.filter(Team.role == role)
+
+    pagination = query.order_by(Team.id.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    return jsonify({
+        "team": [member.to_dict() for member in pagination.items],
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+        "total": pagination.total,
+        "total_pages": pagination.pages,
+    }), 200
+
 
 #AUTH ENDPOINTS
 @api.post("/login")
 def login():
     data = request.get_json(silent=True) or {}
+
     email = data.get("email", "").strip().lower()
     password = data.get("password")
 
@@ -217,10 +252,7 @@ def login():
     user = User.query.filter_by(email=email).first()
 
     # Validate credentials
-    if not user or not check_password_hash(
-        user.password_hash,
-        password
-    ):
+    if not user or not check_password_hash(user.password_hash, password):
         return jsonify({
             "error": "Invalid email or password"
         }), 401
