@@ -215,4 +215,17 @@ def login():
     if not user or not check_password_hash(user.password_hash, password):
         return jsonify({"error": "Invalid email or password"}), 401
 
-    return jsonify({"message": "Login successful", "user": user.to_dict()}), 200
+feat/ui
+    # Validate credentials
+    # Validate credentials
+    if not user or not check_password_hash(
+        user.password_hash,
+        password
+    ):
+        return jsonify({
+            "error": "Invalid email or password"
+        }), 401
+    return jsonify({
+        "message": "Login successful",
+        "user": user.to_dict()
+    }), 200

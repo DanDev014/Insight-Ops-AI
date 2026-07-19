@@ -6,7 +6,7 @@ const items: NavigationMenuItem[][] = [
     {
       label: "Dashboard",
       icon: "i-lucide-layout-dashboard",
-      to: "/",
+      to: "/dashboard",
     },
     {
       label: "AI Briefing",
